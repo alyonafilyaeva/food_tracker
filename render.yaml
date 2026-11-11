@@ -2,7 +2,6 @@ services:
   - type: web
     name: food-tracker-backend
     runtime: docker
-    repo: # заполняется автоматически при подключении репозитория в дашборде Render
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
