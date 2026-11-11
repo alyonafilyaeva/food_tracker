@@ -1,6 +1,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Prisma engine на Alpine (musl) требует явно установленный OpenSSL — без него
+# движок не стартует ("Could not parse schema engine response")
+RUN apk add --no-cache openssl
+
 COPY package.json package-lock.json* ./
 RUN npm install
 
@@ -11,6 +15,8 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
+
+RUN apk add --no-cache openssl
 
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
