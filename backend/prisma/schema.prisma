@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StoreType {
+  OFFLINE
+  ONLINE
+  HYBRID
+}
+
+enum FulfillmentType {
+  IN_STORE
+  DELIVERY
+  PICKUP
+}
+
+// Единица измерения упаковки. Для нормализации цены единицы одной "семьи"
+// (KG/G -> килограммы, L/ML -> литры) сводятся к базовой единице в lib/unitConversion.ts
+enum Unit {
+  KG
+  G
+  L
+  ML
+  PCS
+}
+
+// Данные принадлежат конкретному пользователю — сервис личный,
+// но модель сразу готова к тому, что аккаунтов станет больше (например, у членов семьи).
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  categories Category[]
+  stores     Store[]
+  products   Product[]
+  purchases  Purchase[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  products Product[]
+
+  @@unique([userId, name])
+  @@map("categories")
+}
+
+model Store {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  storeType        StoreType @default(OFFLINE) @map("store_type")
+  hasDelivery      Boolean   @default(false) @map("has_delivery")
+  deliveryPlatform String?   @map("delivery_platform")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  purchases Purchase[]
+
+  @@unique([userId, name])
+  @@map("stores")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  categoryId  String?  @map("category_id")
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Единица по умолчанию — подсказка для автозаполнения формы ввода чека,
+  // в расчёт price_per_base_unit не участвует (там используется volume_unit конкретной позиции).
+  defaultUnit Unit     @map("default_unit")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  purchaseItems PurchaseItem[]
+
+  @@unique([userId, name])
+  @@index([userId, categoryId])
+  @@map("products")
+}
+
+model Purchase {
+  id              String          @id @default(uuid())
+  userId          String          @map("user_id")
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId         String          @map("store_id")
+  store           Store           @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  purchaseDate    DateTime        @map("purchase_date")
+  fulfillmentType FulfillmentType @map("fulfillment_type")
+
+  deliveryFee   Decimal? @map("delivery_fee") @db.Decimal(10, 2)
+  serviceFee    Decimal? @map("service_fee") @db.Decimal(10, 2)
+  tips          Decimal? @db.Decimal(10, 2)
+  promoDiscount Decimal? @map("promo_discount") @db.Decimal(10, 2)
+
+  // Сумма только позиций, без фи. Используется для "чистой" аналитики по продуктам.
+  itemsTotal Decimal @map("items_total") @db.Decimal(10, 2)
+  // items_total + delivery_fee + service_fee + tips (до применения промокода)
+  originalAmount Decimal @map("original_amount") @db.Decimal(10, 2)
+  // original_amount - promo_discount — реально оплаченная сумма
+  totalAmount Decimal @map("total_amount") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items PurchaseItem[]
+
+  @@index([userId, purchaseDate])
+  @@index([storeId])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String   @id @default(uuid())
+  purchaseId String   @map("purchase_id")
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  packsCount    Decimal @map("packs_count") @db.Decimal(10, 3)
+  volumePerPack Decimal @map("volume_per_pack") @db.Decimal(10, 3)
+  volumeUnit    Unit    @map("volume_unit")
+  pricePerPack  Decimal @map("price_per_pack") @db.Decimal(10, 2)
+
+  totalPrice Decimal @map("total_price") @db.Decimal(10, 2)
+  // Цена за 1 кг / 1 л / 1 шт — для сравнения магазинов между собой
+  pricePerBaseUnit Decimal @map("price_per_base_unit") @db.Decimal(10, 4)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
