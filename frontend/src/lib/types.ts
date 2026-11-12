@@ -67,6 +67,7 @@ export interface Purchase {
   deliveryFee: string | null;
   serviceFee: string | null;
   tips: string | null;
+  bagFee: string | null;
   promoDiscount: string | null;
   itemsTotal: string;
   originalAmount: string;
@@ -96,6 +97,7 @@ export interface PurchaseInput {
   deliveryFee?: number;
   serviceFee?: number;
   tips?: number;
+  bagFee?: number;
   promoDiscount?: number;
   items: PurchaseItemInput[];
 }
@@ -127,6 +129,7 @@ export interface SpendingBreakdown {
   deliveryFee: number;
   serviceFee: number;
   tips: number;
+  bagFee: number;
   promoDiscount: number;
 }
 

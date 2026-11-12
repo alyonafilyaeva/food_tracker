@@ -18,6 +18,7 @@ export const purchaseCreateSchema = z.object({
   deliveryFee: z.number().nonnegative().optional(),
   serviceFee: z.number().nonnegative().optional(),
   tips: z.number().nonnegative().optional(),
+  bagFee: z.number().nonnegative().optional(),
   promoDiscount: z.number().nonnegative().optional(),
   items: z.array(purchaseItemInputSchema).min(1, 'Должна быть хотя бы одна позиция'),
 });

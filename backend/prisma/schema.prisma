@@ -105,11 +105,13 @@ model Purchase {
   deliveryFee   Decimal? @map("delivery_fee") @db.Decimal(10, 2)
   serviceFee    Decimal? @map("service_fee") @db.Decimal(10, 2)
   tips          Decimal? @db.Decimal(10, 2)
+  // Пакеты/сумки, купленные на кассе для переноски продуктов — не зависит от fulfillment_type
+  bagFee        Decimal? @map("bag_fee") @db.Decimal(10, 2)
   promoDiscount Decimal? @map("promo_discount") @db.Decimal(10, 2)
 
   // Сумма только позиций, без фи. Используется для "чистой" аналитики по продуктам.
   itemsTotal Decimal @map("items_total") @db.Decimal(10, 2)
-  // items_total + delivery_fee + service_fee + tips (до применения промокода)
+  // items_total + delivery_fee + service_fee + tips + bag_fee (до применения промокода)
   originalAmount Decimal @map("original_amount") @db.Decimal(10, 2)
   // original_amount - promo_discount — реально оплаченная сумма
   totalAmount Decimal @map("total_amount") @db.Decimal(10, 2)

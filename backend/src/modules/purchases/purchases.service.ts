@@ -48,6 +48,7 @@ function calcTotals(
     deliveryFee?: number;
     serviceFee?: number;
     tips?: number;
+    bagFee?: number;
     promoDiscount?: number;
   },
 ) {
@@ -57,7 +58,8 @@ function calcTotals(
   );
   const feesTotal = new Decimal(fees.deliveryFee ?? 0)
     .plus(fees.serviceFee ?? 0)
-    .plus(fees.tips ?? 0);
+    .plus(fees.tips ?? 0)
+    .plus(fees.bagFee ?? 0);
   const originalAmount = itemsTotal.plus(feesTotal);
   const totalAmount = originalAmount.minus(fees.promoDiscount ?? 0);
 
@@ -80,6 +82,7 @@ export async function createPurchase(userId: string, input: PurchaseCreateInput)
       deliveryFee: input.deliveryFee ?? null,
       serviceFee: input.serviceFee ?? null,
       tips: input.tips ?? null,
+      bagFee: input.bagFee ?? null,
       promoDiscount: input.promoDiscount ?? null,
       itemsTotal: itemsTotal.toFixed(2),
       originalAmount: originalAmount.toFixed(2),
@@ -107,6 +110,7 @@ export async function updatePurchase(userId: string, id: string, input: Purchase
       deliveryFee: input.deliveryFee ?? null,
       serviceFee: input.serviceFee ?? null,
       tips: input.tips ?? null,
+      bagFee: input.bagFee ?? null,
       promoDiscount: input.promoDiscount ?? null,
       itemsTotal: itemsTotal.toFixed(2),
       originalAmount: originalAmount.toFixed(2),

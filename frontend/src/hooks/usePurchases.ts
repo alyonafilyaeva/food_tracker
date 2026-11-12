@@ -19,10 +19,30 @@ export function usePurchases(filters: PurchaseListFilters = {}) {
   });
 }
 
+export function usePurchase(id: string) {
+  return useQuery({
+    queryKey: ['purchases', 'detail', id],
+    queryFn: () => api.get<Purchase>(`/purchases/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
 export function useCreatePurchase() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: PurchaseInput) => api.post<Purchase>('/purchases', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+    },
+  });
+}
+
+export function useUpdatePurchase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: PurchaseInput }) =>
+      api.patch<Purchase>(`/purchases/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });

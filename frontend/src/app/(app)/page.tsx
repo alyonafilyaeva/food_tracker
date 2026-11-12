@@ -60,7 +60,8 @@ export default function DashboardPage() {
     ? breakdown.data.itemsTotal +
       breakdown.data.deliveryFee +
       breakdown.data.serviceFee +
-      breakdown.data.tips -
+      breakdown.data.tips +
+      breakdown.data.bagFee -
       breakdown.data.promoDiscount
     : 0;
 
@@ -71,7 +72,7 @@ export default function DashboardPage() {
         <DateRangeFilter value={range} activePreset={preset} onChange={(r, p) => { setRange(r); setPreset(p); }} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label="Траты на продукты" value={formatMoney(breakdown.data?.itemsTotal ?? 0)} />
         <StatCard label="Полные траты" value={formatMoney(fullTotal)} />
         <StatCard
@@ -82,6 +83,7 @@ export default function DashboardPage() {
               (breakdown.data?.tips ?? 0),
           )}
         />
+        <StatCard label="Потрачено на пакеты" value={formatMoney(breakdown.data?.bagFee ?? 0)} />
         <StatCard
           label="Сэкономлено по промокодам"
           value={formatMoney(breakdown.data?.promoDiscount ?? 0)}

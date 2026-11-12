@@ -14,10 +14,11 @@ const SLICES = [
   { key: 'deliveryFee', label: 'Доставка', color: 'var(--series-2)' },
   { key: 'serviceFee', label: 'Сервисный сбор', color: 'var(--series-3)' },
   { key: 'tips', label: 'Чаевые', color: 'var(--series-4)' },
+  { key: 'bagFee', label: 'Пакеты', color: 'var(--series-5)' },
 ] as const;
 
-// 4 категории расходов — категориальные цвета, легенда всегда показана (>=2 серий)
-// и каждая доля подписана напрямую рядом (<=4 слотов — допустимо по marks-and-anatomy.md)
+// Категории расходов — категориальные цвета, легенда всегда показана (>=2 серий)
+// и каждая доля подписана напрямую рядом в списке
 export function BreakdownChart({ data }: BreakdownChartProps) {
   const slices = SLICES.map((slice) => ({ ...slice, value: data[slice.key] })).filter(
     (slice) => slice.value > 0,

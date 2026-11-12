@@ -124,7 +124,7 @@ export async function getSpendingOverTime(userId: string, query: SpendingOverTim
   }));
 }
 
-// Разбивка трат: товары vs доставка/сервисный сбор/чаевые/скидки
+// Разбивка трат: товары vs доставка/сервисный сбор/чаевые/пакеты/скидки
 export async function getSpendingBreakdown(userId: string, query: DateRangeQuery) {
   const { from, to } = query;
   const [row] = await prisma.$queryRaw<
@@ -133,6 +133,7 @@ export async function getSpendingBreakdown(userId: string, query: DateRangeQuery
       deliveryFee: string;
       serviceFee: string;
       tips: string;
+      bagFee: string;
       promoDiscount: string;
     }>
   >`
@@ -140,6 +141,7 @@ export async function getSpendingBreakdown(userId: string, query: DateRangeQuery
            COALESCE(SUM(p.delivery_fee), 0) as "deliveryFee",
            COALESCE(SUM(p.service_fee), 0) as "serviceFee",
            COALESCE(SUM(p.tips), 0) as "tips",
+           COALESCE(SUM(p.bag_fee), 0) as "bagFee",
            COALESCE(SUM(p.promo_discount), 0) as "promoDiscount"
     FROM purchases p
     WHERE p.user_id = ${userId} ${dateFilter(from, to)}
@@ -150,6 +152,7 @@ export async function getSpendingBreakdown(userId: string, query: DateRangeQuery
     deliveryFee: toNum(row.deliveryFee),
     serviceFee: toNum(row.serviceFee),
     tips: toNum(row.tips),
+    bagFee: toNum(row.bagFee),
     promoDiscount: toNum(row.promoDiscount),
   };
 }

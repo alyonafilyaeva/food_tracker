@@ -110,7 +110,12 @@ export default function PurchasesPage() {
                 </span>
               ))}
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Link href={`/purchases/${purchase.id}/edit`}>
+                <Button variant="secondary" size="sm">
+                  Редактировать
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => handleDelete(purchase.id)}>
                 Удалить
               </Button>

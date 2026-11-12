@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/Input';
 import { Segmented } from '@/components/ui/Segmented';
 import { useCreateStore, useStores } from '@/hooks/useStores';
 import { useCreateProduct, fetchLastPurchaseInfo, useProducts } from '@/hooks/useProducts';
-import { useCreatePurchase } from '@/hooks/usePurchases';
+import { useCreatePurchase, useUpdatePurchase } from '@/hooks/usePurchases';
 import { useToast } from '@/lib/toast-context';
 import { ApiError } from '@/lib/api';
-import { todayInputValue } from '@/lib/format';
-import type { FulfillmentType, Product, PurchaseInput, Store } from '@/lib/types';
+import { formatDateInput, todayInputValue } from '@/lib/format';
+import type { FulfillmentType, Product, Purchase, PurchaseInput, Store } from '@/lib/types';
 import { DeliveryFeesBlock } from './DeliveryFeesBlock';
 import { ItemRow } from './ItemRow';
 import { createEmptyRow, type ItemFormRow } from './types';
@@ -23,7 +23,24 @@ const FULFILLMENT_OPTIONS: { value: FulfillmentType; label: string; icon: string
   { value: 'PICKUP', label: 'Самовывоз', icon: '📦' },
 ];
 
-export function PurchaseForm() {
+function purchaseToItemRows(purchase: Purchase): ItemFormRow[] {
+  return purchase.items.map((item) => ({
+    localId: item.id,
+    productId: item.productId,
+    productName: item.product.name,
+    packsCount: item.packsCount,
+    volumePerPack: item.volumePerPack,
+    volumeUnit: item.volumeUnit,
+    pricePerPack: item.pricePerPack,
+  }));
+}
+
+interface PurchaseFormProps {
+  purchase?: Purchase;
+}
+
+export function PurchaseForm({ purchase }: PurchaseFormProps) {
+  const isEditMode = Boolean(purchase);
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -32,13 +49,28 @@ export function PurchaseForm() {
   const createStore = useCreateStore();
   const createProduct = useCreateProduct();
   const createPurchase = useCreatePurchase();
+  const updatePurchase = useUpdatePurchase();
 
-  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('IN_STORE');
-  const [storeId, setStoreId] = useState<string | null>(null);
-  const [storeName, setStoreName] = useState('');
-  const [purchaseDate, setPurchaseDate] = useState(todayInputValue());
-  const [items, setItems] = useState<ItemFormRow[]>([createEmptyRow()]);
-  const [fees, setFees] = useState({ deliveryFee: '', serviceFee: '', tips: '', promoDiscount: '' });
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(
+    purchase?.fulfillmentType ?? 'IN_STORE',
+  );
+  const [storeId, setStoreId] = useState<string | null>(purchase?.storeId ?? null);
+  const [storeName, setStoreName] = useState(purchase?.store.name ?? '');
+  const [purchaseDate, setPurchaseDate] = useState(
+    purchase ? formatDateInput(purchase.purchaseDate) : todayInputValue(),
+  );
+  const [items, setItems] = useState<ItemFormRow[]>(
+    purchase ? purchaseToItemRows(purchase) : [createEmptyRow()],
+  );
+  const [fees, setFees] = useState({
+    deliveryFee: purchase?.deliveryFee ?? '',
+    serviceFee: purchase?.serviceFee ?? '',
+    tips: purchase?.tips ?? '',
+    promoDiscount: purchase?.promoDiscount ?? '',
+  });
+  // Пакеты покупаются независимо от способа получения, поэтому не входят в DeliveryFeesBlock
+  const [bagFee, setBagFee] = useState(purchase?.bagFee ?? '');
+  const isSaving = createPurchase.isPending || updatePurchase.isPending;
 
   const productInputRefs = useRef(new Map<string, HTMLInputElement>());
   const pendingFocusId = useRef<string | null>(null);
@@ -132,12 +164,20 @@ export function PurchaseForm() {
       if (fees.tips) payload.tips = Number(fees.tips);
       if (fees.promoDiscount) payload.promoDiscount = Number(fees.promoDiscount);
     }
+    if (bagFee) payload.bagFee = Number(bagFee);
 
     try {
-      await createPurchase.mutateAsync(payload);
-      showToast('Чек сохранён');
-      setItems([createEmptyRow()]);
-      setFees({ deliveryFee: '', serviceFee: '', tips: '', promoDiscount: '' });
+      if (isEditMode) {
+        await updatePurchase.mutateAsync({ id: purchase!.id, data: payload });
+        showToast('Изменения сохранены');
+        router.push('/purchases');
+      } else {
+        await createPurchase.mutateAsync(payload);
+        showToast('Чек сохранён');
+        setItems([createEmptyRow()]);
+        setFees({ deliveryFee: '', serviceFee: '', tips: '', promoDiscount: '' });
+        setBagFee('');
+      }
     } catch (error) {
       showToast(error instanceof ApiError ? error.message : 'Не удалось сохранить чек', 'error');
     }
@@ -167,6 +207,15 @@ export function PurchaseForm() {
           type="date"
           value={purchaseDate}
           onChange={(e) => setPurchaseDate(e.target.value)}
+        />
+        <Input
+          label="Пакеты на кассе (необязательно)"
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder="0"
+          value={bagFee}
+          onChange={(e) => setBagFee(e.target.value)}
         />
       </div>
 
@@ -211,8 +260,8 @@ export function PurchaseForm() {
         <Button type="button" variant="ghost" onClick={() => router.push('/purchases')}>
           К списку покупок
         </Button>
-        <Button type="submit" disabled={createPurchase.isPending}>
-          {createPurchase.isPending ? 'Сохраняем…' : 'Сохранить чек'}
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? 'Сохраняем…' : isEditMode ? 'Сохранить изменения' : 'Сохранить чек'}
         </Button>
       </div>
     </form>
